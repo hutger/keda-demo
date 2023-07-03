@@ -1,0 +1,36 @@
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: aws-sqs-queue-scaledobject
+  namespace: default
+spec:
+  scaleTargetRef:
+    name: nginx-deployment
+  pollingInterval: 5 #Interval for polling
+  cooldownPeriod: 10
+  idleReplicaCount: 0 # When idle, scale-in to 0 pods
+  minReplicaCount: 1
+  maxReplicaCount: 10
+  fallback:                                                 # Optional. Section to specify fallback options
+    failureThreshold: 3                                     # Mandatory if fallback section is included
+    replicas: 3                                             # Mandatory if fallback section is included
+  advanced:                                                 # Optional. Section to specify advanced options
+    restoreToOriginalReplicaCount: false                    # Optional. Default: false
+    horizontalPodAutoscalerConfig:                          # Optional. Section to specify HPA related options
+      # name: {name-of-hpa-resource}                          # Optional. Default: keda-hpa-{scaled-object-name}
+      behavior:                                             # Optional. Use to modify HPA's scaling behavior
+        scaleDown:
+          stabilizationWindowSeconds: 30
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+  triggers:
+  - type: aws-sqs-queue
+    authenticationRef:
+      name: keda-trigger-auth-aws-credentials
+    metadata:
+      queueURL: https://sqs.us-east-2.amazonaws.com/579607414664/test_queue
+      queueLength: "5"
+      awsRegion: "us-east-2"
